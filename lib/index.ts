@@ -1,16 +1,13 @@
 // Native
-import { readFileSync, statSync, writeFile } from 'fs';
-import { parse, resolve as resolvePath } from 'path';
+import { exec } from 'child_process';
+import { readFileSync } from 'fs';
+import { resolve as resolvePath } from 'path';
 
 // Vendor
 import glob from 'glob';
-import mimeTypes from 'mime-types';
 
 // Arguments
 import { ICLIArgs } from './argsHandler';
-
-// Constants
-import { SUPPORTED_INPUT_TYPES } from './constants';
 
 // Utilities
 import { getFileExtension, getFileName, getFilePath, isDirectory } from './utilities';
@@ -73,120 +70,25 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
     args = CLIArgs;
   }
 
-  return new Promise((resolve): void => {
+  return new Promise((resolve, reject): void => {
     getFileList(args.input).then(fileList => {
       if (args.verbose) {
         console.log('Processing the following files:\n');
+        fileList.forEach(file => console.log(`- ${file}`));
       }
 
-      const buffers: Buffer[] = [];
-      const data: Array<{
-        bufferEnd: number;
-        bufferStart: number;
-        mimeType: string;
-        name: string;
-      }> = [];
-      let bufferOffset = 0;
+      exec(`ffmpeg -h`, (error, stdout, stderr) => {
+        if (error) {
+          console.log(stderr);
+          reject(error);
+        }
 
-      fileList.forEach(file => {
         if (args.verbose) {
-          console.log(`- ${file}`);
+          // console.log(stdout);
         }
 
-        const inputFileExtension = getFileExtension(file);
-
-        if (SUPPORTED_INPUT_TYPES.includes(inputFileExtension)) {
-          const mimeType = mimeTypes.lookup(inputFileExtension) || 'text/plain';
-          const fileSize = statSync(file).size;
-          const fileContent = readFileSync(file);
-
-          buffers.push(fileContent);
-
-          data.push({
-            bufferEnd: bufferOffset + fileSize,
-            bufferStart: bufferOffset,
-            mimeType,
-            name: parse(file).base,
-          });
-
-          bufferOffset += fileSize;
-        } else {
-          console.warn(`\n${file} is not supported and will not be included.`);
-          console.warn(`The supported file extensions are: [${SUPPORTED_INPUT_TYPES}]\n`);
-        }
+        resolve();
       });
-
-      // Pad the JSON data to 4-byte chunks
-      let jsonData = JSON.stringify(data);
-      const remainder = Buffer.byteLength(jsonData) % 4;
-      jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
-
-      if (args.verbose) {
-        console.log(`\n${jsonData}`);
-      }
-
-      // Create the JSON and BIN buffer
-      const jsonBuffer = Buffer.from(jsonData);
-      const binaryBuffer = Buffer.concat(buffers);
-
-      // Allocate buffer (Global header) + (JSON chunk header) + (JSON chunk) + (Binary chunk header) + (Binary chunk)
-      const binpackBufferLength = 12 + 8 + jsonBuffer.length + 8 + binaryBuffer.length;
-      const binpack = Buffer.alloc(binpackBufferLength);
-
-      // Keep track of the internal byte offset
-      let byteOffset = 0;
-
-      // Write BINPACK magic
-      binpack.writeUInt32LE(0x504e4942, 0); // BINP
-      byteOffset += 4;
-
-      // Write BINPACK version
-      binpack.writeUInt32LE(1, byteOffset);
-      byteOffset += 4;
-
-      // Write BINPACK length
-      binpack.writeUInt32LE(binpackBufferLength, byteOffset);
-      byteOffset += 4;
-
-      // Write JSON buffer length
-      binpack.writeUInt32LE(jsonBuffer.length, byteOffset);
-      byteOffset += 4;
-
-      // Write JSON chunk magic
-      binpack.writeUInt32LE(0x4e4f534a, byteOffset); // JSON
-      byteOffset += 4;
-
-      // Write JSON chunk
-      jsonBuffer.copy(binpack, byteOffset);
-      byteOffset += jsonBuffer.length;
-
-      // Write BIN chunk length
-      binpack.writeUInt32LE(binaryBuffer.length, byteOffset);
-      byteOffset += 4;
-
-      // Write BIN chunk magic
-      binpack.writeUInt32LE(0x004e4942, byteOffset); // BIN
-      byteOffset += 4;
-
-      // Write BIN chunk
-      binaryBuffer.copy(binpack, byteOffset);
-
-      // Write the file to disk
-      writeFile(
-        `${getFilePath(args.output)}${getFileName(args.output)}${getFileExtension(args.output)}`,
-        binpack,
-        () => {
-          if (args.verbose) {
-            console.log(
-              `\nWrote to ${getFilePath(args.output)}${getFileName(args.output)}${getFileExtension(
-                args.output
-              )}`
-            );
-          }
-
-          resolve();
-        }
-      );
     });
   });
 };
