@@ -9,6 +9,9 @@ import glob from 'glob';
 // Arguments
 import { ICLIArgs } from './argsHandler';
 
+// Constants
+import { SUPPORTED_INPUT_TYPES } from './constants';
+
 // Utilities
 import { getFileExtension, getFileName, getFilePath, isDirectory } from './utilities';
 
@@ -77,10 +80,19 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         fileList.forEach(file => console.log(`- ${file}`));
       }
 
+      const supportedList = fileList.filter(file => {
+        if (SUPPORTED_INPUT_TYPES.includes(getFileExtension(file))) {
+          return file;
+        } else {
+          console.warn(`\n${file} is not supported and will not be included.`);
+          console.warn(`The supported file extensions are: [${SUPPORTED_INPUT_TYPES}]\n`);
+        }
+      });
+
       const command = `ffmpeg -i ${(() =>
-        fileList.reduce(
+        supportedList.reduce(
           (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
-        ))()} -filter_complex "aevalsrc=exprs=0:d=1[silence], [0:a] [silence] [1:a] concat=n=${fileList.length +
+        ))()} -filter_complex "aevalsrc=exprs=0:d=1[silence], [0:a] [silence] [1:a] concat=n=${supportedList.length +
         1}:v=0:a=1" -y ${args.output}`;
 
       if (args.verbose) {
