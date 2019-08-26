@@ -1,6 +1,6 @@
 {
   "name": "@timvanscherpenzeel/audiopacker",
-  "version": "1.0.2",
+  "version": "0.0.1",
   "description": "CLI tool for packing multiple audio sprites into a single audio file.",
   "main": "dist/cli/lib/index.js",
   "author": "Tim van Scherpenzeel",
