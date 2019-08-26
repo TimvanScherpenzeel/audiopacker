@@ -1,6 +1,6 @@
 // Native
 import { exec } from 'child_process';
-import { readFileSync, statSync } from 'fs';
+import { readFileSync, statSync, writeFile } from 'fs';
 import { resolve as resolvePath } from 'path';
 
 // Vendor
@@ -86,7 +86,7 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           return file;
         } else {
           console.warn(`\n${file} is not supported and will not be included.`);
-          console.warn(`The supported file extensions are: [${SUPPORTED_INPUT_TYPES}]\n`);
+          console.warn(`The supported file extensions are: [${SUPPORTED_INPUT_TYPES}]`);
         }
       });
 
@@ -122,34 +122,10 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         1}:v=0:a=1" -y ${args.output}`;
 
       if (args.verbose) {
-        console.log(`\nUsing the following command: ${command}\n`);
+        console.log(`\nUsing the following command: ${command}`);
       }
 
       files.then(entries => {
-        let offset = 0;
-
-        const data: Array<{ file: string; duration: number; start: number; end: number }> = [];
-
-        entries.forEach((entry: any) => {
-          data.push({
-            file: entry.file,
-            duration: entry.duration,
-            start: offset,
-            end: offset + entry.duration,
-          });
-
-          offset += entry.duration + SILENCE_PADDING;
-        });
-
-        // Pad the JSON data to 4-byte chunks
-        let jsonData = JSON.stringify(data);
-        const remainder = Buffer.byteLength(jsonData) % 4;
-        jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
-
-        if (args.verbose) {
-          console.log(`\n${jsonData}`);
-        }
-
         exec(command, (error, stdout, stderr) => {
           if (error) {
             console.log(stderr);
@@ -160,16 +136,96 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
             console.log(stdout);
           }
 
-          // Create the JSON and BIN buffer
-          const jsonBuffer = Buffer.from(jsonData);
+          const buffers: Buffer[] = [];
+          const data: Array<{ file: string; duration: number; start: number; end: number }> = [];
+
+          let spriteOffset = 0;
+
+          entries.forEach((entry: any) => {
+            data.push({
+              file: entry.file,
+              duration: entry.duration,
+              start: spriteOffset,
+              end: spriteOffset + entry.duration,
+            });
+
+            spriteOffset += entry.duration + SILENCE_PADDING;
+          });
 
           const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || 'text/plain';
           const fileSize = statSync(args.output).size;
           const fileContent = readFileSync(args.output);
 
-          console.log(fileContent, fileSize, mimeType);
+          buffers.push(fileContent);
 
-          resolve();
+          // Pad the JSON data to 4-byte chunks
+          let jsonData = JSON.stringify({ mimeType, fileSize, data });
+          const remainder = Buffer.byteLength(jsonData) % 4;
+          jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
+
+          if (args.verbose) {
+            console.log(`${jsonData}`);
+          }
+
+          // Create the JSON and BIN buffer
+          const jsonBuffer = Buffer.from(jsonData);
+          const binaryBuffer = Buffer.concat(buffers);
+
+          // Allocate buffer (Global header) + (JSON chunk header) + (JSON chunk) + (Binary chunk header) + (Binary chunk)
+          const audiopackBufferLength = 12 + 8 + jsonBuffer.length + 8 + binaryBuffer.length;
+          const audiopack = Buffer.alloc(audiopackBufferLength);
+
+          // Keep track of the internal byte offset
+          let byteOffset = 0;
+
+          // Write AUDIOPACK magic
+          audiopack.writeUInt32LE(0x50445541, 0); // AUDP
+          byteOffset += 4;
+
+          // Write AUDIOPACK version
+          audiopack.writeUInt32LE(1, byteOffset);
+          byteOffset += 4;
+
+          // Write AUDIOPACK length
+          audiopack.writeUInt32LE(audiopackBufferLength, byteOffset);
+          byteOffset += 4;
+
+          // Write JSON buffer length
+          audiopack.writeUInt32LE(jsonBuffer.length, byteOffset);
+          byteOffset += 4;
+
+          // Write JSON chunk magic
+          audiopack.writeUInt32LE(0x4e4f534a, byteOffset); // JSON
+          byteOffset += 4;
+
+          // Write JSON chunk
+          jsonBuffer.copy(audiopack, byteOffset);
+          byteOffset += jsonBuffer.length;
+
+          // Write BIN chunk length
+          audiopack.writeUInt32LE(binaryBuffer.length, byteOffset);
+          byteOffset += 4;
+
+          // Write BIN chunk magic
+          audiopack.writeUInt32LE(0x004e4942, byteOffset); // BIN
+          byteOffset += 4;
+
+          // Write BIN chunk
+          binaryBuffer.copy(audiopack, byteOffset);
+
+          writeFile(
+            `${getFilePath(args.output)}${getFileName(args.output)}.audiopack`,
+            audiopack,
+            () => {
+              if (args.verbose) {
+                console.log(
+                  `\nWrote to ${getFilePath(args.output)}${getFileName(args.output)}.audiopack`
+                );
+              }
+
+              resolve();
+            }
+          );
         });
       });
     });
