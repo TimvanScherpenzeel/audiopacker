@@ -111,7 +111,7 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           buffers.push(fileContent);
 
           // Pad the JSON data to 4-byte chunks
-          let jsonData = JSON.stringify({ mimeType, data: obj.data });
+          let jsonData = JSON.stringify({ mimeType, data: obj.data.audioSprite });
           const remainder = Buffer.byteLength(jsonData) % 4;
           jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
 
