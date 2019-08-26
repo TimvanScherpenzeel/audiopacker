@@ -42,7 +42,7 @@ $ node ./bin/audiopacker.js -i ./input/manifest.json -o ./output/example.audiopa
 
 ## File structure
 
-A `.audiopack` file has the following structure (very similar to the [GLB File Format Specification](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification)):
+An `.audiopack` file has the following structure (very similar to the [GLB File Format Specification](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification)):
 
 ![file_structure](/docs/file_structure.png?raw=true)
 
@@ -97,7 +97,7 @@ The binary chunk (`ubyte[] chunkData`) contains a single `Uint8Array` typed arra
 ### Required
 
     -i, --input [example: ./input (glob) or ./input/manifest.json (manifest)] [required]
-    -o, --output [example: ./output/example.audiopack] [required]
+    -o, --output [example: ./output/example.mp3] [required]
 
 ### Optional
 
