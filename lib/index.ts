@@ -77,27 +77,30 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         fileList.forEach(file => console.log(`- ${file}`));
       }
 
-      exec(
-        `ffmpeg -i ${(() =>
-          fileList.reduce(
-            (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
-          ))()} -filter_complex "aevalsrc=exprs=0:d=1[silence], [0:a] [silence] [1:a] concat=n=${fileList.length +
-          1}:v=0:a=1" -y ${args.output}`,
-        (error, stdout, stderr) => {
+      const command = `ffmpeg -i ${(() =>
+        fileList.reduce(
+          (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
+        ))()} -filter_complex "aevalsrc=exprs=0:d=1[silence], [0:a] [silence] [1:a] concat=n=${fileList.length +
+        1}:v=0:a=1" -y ${args.output}`;
+
+      if (args.verbose) {
+        console.log(`\nUsing the following command: ${command}\n`);
+      }
+
+      exec(command, (error, stdout, stderr) => {
+        console.log(stderr);
+
+        if (error) {
           console.log(stderr);
-
-          if (error) {
-            console.log(stderr);
-            reject(error);
-          }
-
-          if (args.verbose) {
-            console.log(stdout);
-          }
-
-          resolve();
+          reject(error);
         }
-      );
+
+        if (args.verbose) {
+          console.log(stdout);
+        }
+
+        resolve();
+      });
     });
   });
 };
