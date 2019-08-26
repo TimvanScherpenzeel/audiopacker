@@ -105,7 +105,7 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
 
           const buffers: Buffer[] = [];
 
-          const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || 'text/plain';
+          const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || '';
           const fileContent = readFileSync(args.output);
 
           buffers.push(fileContent);
