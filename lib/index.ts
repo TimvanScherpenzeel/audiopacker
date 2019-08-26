@@ -89,6 +89,31 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         }
       });
 
+      const files = Promise.all(
+        supportedList.map(
+          file =>
+            new Promise((resolve, reject) => {
+              exec(
+                `ffprobe -i ${file.replace(
+                  / /g,
+                  '\\ '
+                )} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1`,
+                (error, stdout, stderr) => {
+                  if (error) {
+                    console.log(stderr);
+                    reject(error);
+                  }
+
+                  resolve({
+                    file,
+                    duration: parseFloat(stdout),
+                  });
+                }
+              );
+            })
+        )
+      );
+
       const command = `ffmpeg -i ${(() =>
         supportedList.reduce(
           (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
@@ -99,19 +124,21 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         console.log(`\nUsing the following command: ${command}\n`);
       }
 
-      exec(command, (error, stdout, stderr) => {
-        console.log(stderr);
+      files.then(durations => {
+        console.log(durations);
 
-        if (error) {
-          console.log(stderr);
-          reject(error);
-        }
+        exec(command, (error, stdout, stderr) => {
+          if (error) {
+            console.log(stderr);
+            reject(error);
+          }
 
-        if (args.verbose) {
-          console.log(stdout);
-        }
+          if (args.verbose) {
+            console.log(stdout);
+          }
 
-        resolve();
+          resolve();
+        });
       });
     });
   });
