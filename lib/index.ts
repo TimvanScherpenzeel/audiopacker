@@ -59,7 +59,7 @@ const getFileList = (inputPath: string): Promise<string[]> => {
 };
 
 /**
- * Pack a files into a single binpack format
+ * Pack a files into a single audiopack format
  */
 export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
   let args: ICLIArgs;
