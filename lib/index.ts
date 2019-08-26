@@ -1,5 +1,5 @@
 // Native
-import { readFileSync, writeFile, unlinkSync } from 'fs';
+import { readFileSync, writeFile, unlinkSync, statSync } from 'fs';
 import { resolve as resolvePath } from 'path';
 
 // Vendor
@@ -106,12 +106,18 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           const buffers: Buffer[] = [];
 
           const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || '';
+          const fileSize = statSync(args.output).size;
           const fileContent = readFileSync(args.output);
 
           buffers.push(fileContent);
 
           // Pad the JSON data to 4-byte chunks
-          let jsonData = JSON.stringify({ mimeType, data: obj.data.audioSprite });
+          let jsonData = JSON.stringify({
+            mimeType,
+            bufferStart: 0,
+            bufferEnd: fileSize,
+            data: obj.data.audioSprite,
+          });
           const remainder = Buffer.byteLength(jsonData) % 4;
           jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
 
