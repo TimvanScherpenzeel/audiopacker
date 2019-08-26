@@ -1,7 +1,7 @@
 // Native
 import { exec } from 'child_process';
 import { readFileSync } from 'fs';
-import { resolve as resolvePath } from 'path';
+import { resolve as resolvePath, parse } from 'path';
 
 // Vendor
 import glob from 'glob';
@@ -10,7 +10,7 @@ import glob from 'glob';
 import { ICLIArgs } from './argsHandler';
 
 // Constants
-import { SUPPORTED_INPUT_TYPES } from './constants';
+import { SUPPORTED_INPUT_TYPES, SILENCE_PADDING } from './constants';
 
 // Utilities
 import { getFileExtension, getFileName, getFilePath, isDirectory } from './utilities';
@@ -117,15 +117,36 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
       const command = `ffmpeg -i ${(() =>
         supportedList.reduce(
           (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
-        ))()} -filter_complex "aevalsrc=exprs=0:d=1[silence], [0:a] [silence] [1:a] concat=n=${supportedList.length +
+        ))()} -filter_complex "aevalsrc=exprs=0:d=${SILENCE_PADDING}[silence], [0:a] [silence] [1:a] concat=n=${supportedList.length +
         1}:v=0:a=1" -y ${args.output}`;
 
       if (args.verbose) {
         console.log(`\nUsing the following command: ${command}\n`);
       }
 
-      files.then(durations => {
-        console.log(durations);
+      files.then(entries => {
+        let offset = 0;
+
+        const data: Array<{ file: string; duration: number; start: number; end: number }> = [];
+
+        entries.forEach((entry: any) => {
+          data.push({
+            file: entry.file,
+            duration: entry.duration,
+            start: offset,
+            end: offset + entry.duration,
+          });
+
+          offset += entry.duration + SILENCE_PADDING;
+        });
+
+        let jsonData = JSON.stringify(data);
+        const remainder = Buffer.byteLength(jsonData) % 4;
+        jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
+
+        if (args.verbose) {
+          console.log(`\n${jsonData}`);
+        }
 
         exec(command, (error, stdout, stderr) => {
           if (error) {

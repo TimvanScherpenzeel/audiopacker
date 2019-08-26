@@ -5,3 +5,5 @@ export const SUPPORTED_INPUT_TYPES = [
   '.m4a',
   '.ogg',
 ];
+
+export const SILENCE_PADDING = 1;
