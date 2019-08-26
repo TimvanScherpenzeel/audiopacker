@@ -213,6 +213,7 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           // Write BIN chunk
           binaryBuffer.copy(audiopack, byteOffset);
 
+          // Write the file to disk
           writeFile(
             `${getFilePath(args.output)}${getFileName(args.output)}.audiopack`,
             audiopack,
