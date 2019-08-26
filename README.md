@@ -31,13 +31,10 @@ $ node ./bin/audiopacker.js -i ./input/manifest.json -o ./output/example.audiopa
   "path": "./input/",
   "manifest": [
     {
-      "src": "icon-twitter.svg"
+      "src": "010-0-start.mp3"
     },
     {
-      "src": "spritesheet (2).json"
-    },
-    {
-      "src": "texture.jpg"
+      "src": "010-1-loop.mp3"
     }
   ]
 }
