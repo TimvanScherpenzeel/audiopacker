@@ -94,9 +94,8 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         supportedList,
         {
           output: `${getFilePath(args.output)}${getFileName(args.output)}`,
-          log: 'info',
           format: 'createjs',
-          export: 'mp3',
+          export: getFileExtension(args.output).substring(1),
         },
         (err: any, obj: any) => {
           if (err) {
