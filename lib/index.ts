@@ -1,5 +1,5 @@
 // Native
-import { readFileSync, writeFile } from 'fs';
+import { readFileSync, writeFile, unlinkSync } from 'fs';
 import { resolve as resolvePath } from 'path';
 
 // Vendor
@@ -164,6 +164,9 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
 
           // Write BIN chunk
           binaryBuffer.copy(audiopack, byteOffset);
+
+          // Remove the original file
+          unlinkSync(args.output);
 
           // Write the file to disk
           writeFile(
