@@ -115,11 +115,12 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         )
       );
 
+      // TODO: currently it appears only the first clip gets padded which is wrong
       const command = `ffmpeg -i ${(() =>
         supportedList.reduce(
           (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
         ))()} -filter_complex "aevalsrc=exprs=0:d=${SILENCE_PADDING}[silence], [0:a] [silence] [1:a] concat=n=${supportedList.length +
-        1}:v=0:a=1" -y ${args.output}`;
+        1}:v=0:a=1[outa]" -map [outa] -y ${args.output}`;
 
       if (args.verbose) {
         console.log(`\nUsing the following command: ${command}`);

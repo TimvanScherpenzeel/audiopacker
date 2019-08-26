@@ -6,4 +6,4 @@ export const SUPPORTED_INPUT_TYPES = [
   '.ogg',
 ];
 
-export const SILENCE_PADDING = 1;
+export const SILENCE_PADDING = 10;
