@@ -1,10 +1,11 @@
 // Native
 import { exec } from 'child_process';
-import { readFileSync } from 'fs';
-import { resolve as resolvePath, parse } from 'path';
+import { readFileSync, statSync } from 'fs';
+import { resolve as resolvePath } from 'path';
 
 // Vendor
 import glob from 'glob';
+import mimeTypes from 'mime-types';
 
 // Arguments
 import { ICLIArgs } from './argsHandler';
@@ -140,6 +141,7 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           offset += entry.duration + SILENCE_PADDING;
         });
 
+        // Pad the JSON data to 4-byte chunks
         let jsonData = JSON.stringify(data);
         const remainder = Buffer.byteLength(jsonData) % 4;
         jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
@@ -157,6 +159,15 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
           if (args.verbose) {
             console.log(stdout);
           }
+
+          // Create the JSON and BIN buffer
+          const jsonBuffer = Buffer.from(jsonData);
+
+          const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || 'text/plain';
+          const fileSize = statSync(args.output).size;
+          const fileContent = readFileSync(args.output);
+
+          console.log(fileContent, fileSize, mimeType);
 
           resolve();
         });
