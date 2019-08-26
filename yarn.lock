@@ -23,6 +23,7 @@
 "@types/audiosprite@^0.6.0":
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/@types/audiosprite/-/audiosprite-0.6.0.tgz#5d349099b346599d3f90c90cf3473532ce44ce15"
+  integrity sha512-h+KBkFlbX366bV9Gz3kBEJoV5tUdmLt1STCmzqH4iAiMSswxo9cNs6Wv58BDmn3G0ohOgt/+QWFx8n/+keGoUA==
 
 "@types/events@*":
   version "3.0.0"
