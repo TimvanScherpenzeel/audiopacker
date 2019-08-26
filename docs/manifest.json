@@ -1,0 +1,11 @@
+{
+  "path": "./input/",
+  "manifest": [
+    {
+      "src": "010-0-start.mp3"
+    },
+    {
+      "src": "010-1-loop.mp3"
+    }
+  ]
+}
