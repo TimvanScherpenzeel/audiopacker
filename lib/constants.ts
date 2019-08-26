@@ -4,4 +4,6 @@ export const SUPPORTED_INPUT_TYPES = [
   '.wav',
   '.m4a',
   '.ogg',
+  '.aac',
+  '.ac3',
 ];
