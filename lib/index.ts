@@ -1,9 +1,9 @@
 // Native
-import { exec } from 'child_process';
-import { readFileSync, statSync, writeFile } from 'fs';
+import { readFileSync, writeFile } from 'fs';
 import { resolve as resolvePath } from 'path';
 
 // Vendor
+import audiosprite from 'audiosprite';
 import glob from 'glob';
 import mimeTypes from 'mime-types';
 
@@ -11,7 +11,7 @@ import mimeTypes from 'mime-types';
 import { ICLIArgs } from './argsHandler';
 
 // Constants
-import { SUPPORTED_INPUT_TYPES, SILENCE_PADDING } from './constants';
+import { SUPPORTED_INPUT_TYPES } from './constants';
 
 // Utilities
 import { getFileExtension, getFileName, getFilePath, isDirectory } from './utilities';
@@ -90,82 +90,34 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
         }
       });
 
-      const files = Promise.all(
-        supportedList.map(
-          file =>
-            new Promise((resolve, reject) => {
-              exec(
-                `ffprobe -i ${file.replace(
-                  / /g,
-                  '\\ '
-                )} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1`,
-                (error, stdout, stderr) => {
-                  if (error) {
-                    console.log(stderr);
-                    reject(error);
-                  }
-
-                  resolve({
-                    file,
-                    duration: parseFloat(stdout),
-                  });
-                }
-              );
-            })
-        )
-      );
-
-      // TODO: currently it appears only the first clip gets padded which is wrong
-      const command = `ffmpeg -i ${(() =>
-        supportedList.reduce(
-          (files, file) => files + ` -i ${file.replace(/ /g, '\\ ')}`
-        ))()} -filter_complex "aevalsrc=exprs=0:d=${SILENCE_PADDING}[silence], [0:a] [silence] [1:a] concat=n=${supportedList.length +
-        1}:v=0:a=1[outa]" -map [outa] -y ${args.output}`;
-
-      if (args.verbose) {
-        console.log(`\nUsing the following command: ${command}`);
-      }
-
-      files.then(entries => {
-        exec(command, (error, stdout, stderr) => {
-          if (error) {
-            console.log(stderr);
-            reject(error);
-          }
-
-          if (args.verbose) {
-            console.log(stdout);
+      audiosprite(
+        supportedList,
+        {
+          output: `${getFilePath(args.output)}${getFileName(args.output)}`,
+          log: 'info',
+          format: 'createjs',
+          export: 'mp3',
+        },
+        (err: any, obj: any) => {
+          if (err) {
+            console.error(err);
+            reject(err);
           }
 
           const buffers: Buffer[] = [];
-          const data: Array<{ file: string; duration: number; start: number; end: number }> = [];
-
-          let spriteOffset = 0;
-
-          entries.forEach((entry: any) => {
-            data.push({
-              file: entry.file,
-              duration: entry.duration,
-              start: spriteOffset,
-              end: spriteOffset + entry.duration,
-            });
-
-            spriteOffset += entry.duration + SILENCE_PADDING;
-          });
 
           const mimeType = mimeTypes.lookup(getFileExtension(args.output)) || 'text/plain';
-          const fileSize = statSync(args.output).size;
           const fileContent = readFileSync(args.output);
 
           buffers.push(fileContent);
 
           // Pad the JSON data to 4-byte chunks
-          let jsonData = JSON.stringify({ mimeType, fileSize, data });
+          let jsonData = JSON.stringify({ mimeType, data: obj.data });
           const remainder = Buffer.byteLength(jsonData) % 4;
           jsonData = jsonData.padEnd(jsonData.length + (remainder === 0 ? 0 : 4 - remainder), ' ');
 
           if (args.verbose) {
-            console.log(`${jsonData}`);
+            console.log(`\n${jsonData}`);
           }
 
           // Create the JSON and BIN buffer
@@ -228,8 +180,8 @@ export const pack = (CLIArgs?: ICLIArgs): Promise<any> => {
               resolve();
             }
           );
-        });
-      });
+        }
+      );
     });
   });
 };

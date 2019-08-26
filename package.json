@@ -15,7 +15,9 @@
     "audiopacker": "./bin/audiopacker.js"
   },
   "dependencies": {
+    "@types/audiosprite": "^0.6.0",
     "argparse": "^1.0.10",
+    "audiosprite": "^0.7.1",
     "glob": "^7.1.4",
     "mime-types": "^2.1.24"
   },
